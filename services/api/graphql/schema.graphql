@@ -1,0 +1,46 @@
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+scalar JSON @scalar(class: "App\\GraphQL\\Scalars\\JSON")
+
+type Query {
+    me: User @auth(guard: "sanctum")
+    projects: [Project!]! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@projects")
+    project(id: ID!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@project")
+    sessions(projectId: ID!, limit: Int = 50): [Session!]! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@sessions")
+    session(id: ID!): Session! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@session")
+    overview(projectId: ID!): Overview! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@overview")
+    recordingEvents(sessionId: ID!): JSON! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@recordingEvents")
+}
+
+type Mutation {
+    register(input: RegisterInput!): AuthPayload! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@register")
+    login(input: LoginInput!): AuthPayload! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@login")
+    logout: Boolean! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@logout")
+    createProject(input: CreateProjectInput!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\ProjectMutation@create")
+    updateProject(id: ID!, input: UpdateProjectInput!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\ProjectMutation@update")
+    ingestRecording(input: RecordingBatchInput!): IngestionResult! @field(resolver: "App\\GraphQL\\Mutations\\RecordingMutation@ingest")
+}
+
+type User { id: ID!, name: String!, email: String!, created_at: DateTime! }
+type Project {
+    id: ID!, name: String!, public_key: String!, recording_enabled: Boolean!, sampling_rate: Int!,
+    privacy_settings: JSON, last_event_at: DateTime, domains: [ProjectDomain!]!, created_at: DateTime!
+}
+type ProjectDomain { id: ID!, domain: String! }
+type Session {
+    id: ID!, session_uuid: String!, started_at: DateTime!, ended_at: DateTime, duration: Int!,
+    landing_page: String, exit_page: String, page_count: Int!, device_type: String, browser: String,
+    country: String, converted: Boolean!, rage_clicks: Int!, dead_clicks: Int!, visitor: Visitor!
+}
+type Visitor { id: ID!, visitor_uuid: String! }
+type Overview { visitors: Int!, sessions: Int!, averageDuration: Int!, pagesPerSession: Float!, conversionRate: Float!, conversions: Int! }
+type AuthPayload { token: String!, user: User! }
+type IngestionResult { accepted: Boolean!, batchId: String, eventCount: Int! }
+
+input RegisterInput { name: String!, email: String!, password: String!, password_confirmation: String! }
+input LoginInput { email: String!, password: String! }
+input CreateProjectInput { name: String!, domains: [String!]! }
+input UpdateProjectInput { name: String, domains: [String!], recordingEnabled: Boolean, samplingRate: Int, privacySettings: JSON }
+input RecordingBatchInput {
+    projectKey: String!, visitorId: String!, sessionId: String!, url: String!, referrer: String,
+    viewportWidth: Int, viewportHeight: Int, userAgent: String, encoding: String! = "GZIP_BASE64", payload: String!
+}

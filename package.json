@@ -1,0 +1,10 @@
+{
+  "name": "pulsecro",
+  "private": true,
+  "workspaces": ["services/dashboard", "packages/tracker"],
+  "scripts": {
+    "build": "npm run build --workspace @pulsecro/tracker && npm run build --workspace dashboard",
+    "test": "npm run test --workspace @pulsecro/tracker",
+    "lint": "npm run lint --workspace dashboard"
+  }
+}

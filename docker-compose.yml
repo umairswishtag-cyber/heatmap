@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cro}
+      POSTGRES_USER: ${POSTGRES_USER:-cro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cro} -d ${POSTGRES_DB:-cro}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-change-me}
+    volumes: [redis-data:/data]
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-now}
+    ports: ["9001:9001"]
+    volumes: [minio-data:/data]
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on: [minio]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          sleep 2
+        done
+        mc mb --ignore-existing "local/$${MINIO_BUCKET}"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-now}
+      MINIO_BUCKET: ${MINIO_BUCKET:-recordings}
+
+  api:
+    build: ./services/api
+    env_file: ./services/api/.env.docker
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+      minio: { condition: service_started }
+    environment:
+      DB_DATABASE: ${POSTGRES_DB:-cro}
+      DB_USERNAME: ${POSTGRES_USER:-cro}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minio}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-change-me-now}
+      AWS_BUCKET: ${MINIO_BUCKET:-recordings}
+
+  worker:
+    build: ./services/api
+    command: php artisan queue:work redis --queue=recordings,default --tries=3 --timeout=120
+    env_file: ./services/api/.env.docker
+    depends_on: [api]
+    environment:
+      DB_DATABASE: ${POSTGRES_DB:-cro}
+      DB_USERNAME: ${POSTGRES_USER:-cro}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minio}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-change-me-now}
+      AWS_BUCKET: ${MINIO_BUCKET:-recordings}
+
+  dashboard:
+    build:
+      context: ./services/dashboard
+      args:
+        NEXT_PUBLIC_GRAPHQL_URL: ${NEXT_PUBLIC_GRAPHQL_URL:-http://localhost/graphql}
+    environment:
+      NEXT_PUBLIC_GRAPHQL_URL: ${NEXT_PUBLIC_GRAPHQL_URL:-http://localhost/graphql}
+    ports: ["3000:3000"]
+    depends_on: [api]
+
+  nginx:
+    build:
+      context: .
+      dockerfile: infrastructure/nginx/Dockerfile
+    ports: ["80:80"]
+    depends_on: [api, dashboard]
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
