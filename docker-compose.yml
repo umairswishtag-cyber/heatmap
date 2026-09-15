@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-cro}
       POSTGRES_USER: ${POSTGRES_USER:-cro}
@@ -14,16 +15,18 @@ services:
 
   redis:
     image: redis:8-alpine
+    restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD:-change-me}
     volumes: [redis-data:/data]
 
   minio:
     image: quay.io/minio/minio:latest
+    restart: unless-stopped
     command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-now}
-    ports: ["9001:9001"]
+    ports: ["${MINIO_CONSOLE_PORT:-9001}:9001"]
     volumes: [minio-data:/data]
 
   minio-init:
@@ -43,12 +46,14 @@ services:
 
   api:
     build: ./services/api
+    restart: unless-stopped
     env_file: ./services/api/.env.docker
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_started }
       minio: { condition: service_started }
     environment:
+      APP_URL: ${APP_URL:-http://localhost}
       DB_DATABASE: ${POSTGRES_DB:-cro}
       DB_USERNAME: ${POSTGRES_USER:-cro}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
@@ -59,10 +64,12 @@ services:
 
   worker:
     build: ./services/api
+    restart: unless-stopped
     command: php artisan queue:work redis --queue=recordings,default --tries=3 --timeout=120
     env_file: ./services/api/.env.docker
     depends_on: [api]
     environment:
+      APP_URL: ${APP_URL:-http://localhost}
       DB_DATABASE: ${POSTGRES_DB:-cro}
       DB_USERNAME: ${POSTGRES_USER:-cro}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
@@ -72,20 +79,24 @@ services:
       AWS_BUCKET: ${MINIO_BUCKET:-recordings}
 
   dashboard:
+    restart: unless-stopped
     build:
       context: ./services/dashboard
       args:
         NEXT_PUBLIC_GRAPHQL_URL: ${NEXT_PUBLIC_GRAPHQL_URL:-http://localhost/graphql}
+        NEXT_PUBLIC_TRACKER_URL: ${NEXT_PUBLIC_TRACKER_URL:-http://localhost/tracker.js}
     environment:
       NEXT_PUBLIC_GRAPHQL_URL: ${NEXT_PUBLIC_GRAPHQL_URL:-http://localhost/graphql}
-    ports: ["3000:3000"]
+      NEXT_PUBLIC_TRACKER_URL: ${NEXT_PUBLIC_TRACKER_URL:-http://localhost/tracker.js}
+    ports: ["${DASHBOARD_PORT:-3000}:3000"]
     depends_on: [api]
 
   nginx:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: infrastructure/nginx/Dockerfile
-    ports: ["80:80"]
+    ports: ["${HTTP_PORT:-80}:80"]
     depends_on: [api, dashboard]
 
 volumes:
