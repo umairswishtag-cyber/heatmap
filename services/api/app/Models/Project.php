@@ -30,4 +30,14 @@ class Project extends Model
     {
         return $this->hasMany(RecordingSession::class);
     }
+
+    public function visitors()
+    {
+        return $this->hasMany(Visitor::class);
+    }
+
+    public function funnels()
+    {
+        return $this->hasMany(Funnel::class)->latest('updated_at');
+    }
 }

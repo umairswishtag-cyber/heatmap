@@ -93,8 +93,11 @@ class RecordingProcessorService
                 DB::table('click_events')->insert([
                     'project_id' => $projectId, 'session_id' => $session->id, 'url' => $data['url'] ?? $fallbackUrl,
                     'x' => (int) ($data['x'] ?? 0), 'y' => (int) ($data['y'] ?? 0),
+                    'page_x' => isset($data['pageX']) ? (int) $data['pageX'] : null,
+                    'page_y' => isset($data['pageY']) ? (int) $data['pageY'] : null,
                     'viewport_width' => max(1, (int) ($data['viewportWidth'] ?? 1)),
                     'viewport_height' => max(1, (int) ($data['viewportHeight'] ?? 1)),
+                    'document_height' => isset($data['documentHeight']) ? max(1, (int) $data['documentHeight']) : null,
                     'selector' => substr($data['selector'] ?? '', 0, 500), 'occurred_at' => $occurredAt,
                     'created_at' => now(), 'updated_at' => now(),
                 ]);

@@ -5,7 +5,9 @@ export function installClicks(emit) {
     if (isIgnored(event.target)) return;
     emit('click', {
       x: Math.round(event.clientX), y: Math.round(event.clientY),
+      pageX: Math.round(event.pageX), pageY: Math.round(event.pageY),
       viewportWidth: innerWidth, viewportHeight: innerHeight,
+      documentHeight: Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight || 0),
       selector: safeSelector(event.target), url: location.href,
     });
   };

@@ -1,10 +1,10 @@
 # Delivery status
 
-Last updated: 2026-09-14
+Last updated: 2026-09-21
 
 Status values: **Done**, **In progress**, **Planned**.
 
-## Current milestone: Phase 1 foundation
+## Current milestone: Phase 2–3 behavior and conversion analysis
 
 | Area | Status | Notes |
 | --- | --- | --- |
@@ -22,8 +22,10 @@ Status values: **Done**, **In progress**, **Planned**.
 | Live dashboard authentication | Done | Browser token flow and authenticated GraphQL client |
 | Session listing | Done | Project-scoped GraphQL query and table |
 | Session replay | Done | Authorized chunk aggregation and rrweb-player route |
+| Heatmaps | Done | Project-scoped click and scroll maps with page, date, and device filters plus CSV export |
+| Funnels | Done | Saved ordered funnels, page/custom-event steps, conversion/drop-off analysis, and median timing |
 | Automated API tests | In progress | Core unit/feature coverage is started; expand edge cases |
-| End-to-end Docker verification | Planned | Docker is not installed in the current workstation environment |
+| End-to-end Docker verification | Done | Images rebuilt, migration applied, routes and tracker smoke-tested through Nginx |
 
 ## Known production gaps before Phase 1 release
 
@@ -36,21 +38,20 @@ Status values: **Done**, **In progress**, **Planned**.
 
 ## Verification snapshot
 
-Verified on 2026-09-14 in the current workstation:
+Verified on 2026-09-21 in the current workstation:
 
 - Lighthouse GraphQL schema validation: passed
-- Laravel test suite: 6 tests, 21 assertions, all passed
+- Laravel test suite: 8 tests, 31 assertions, all passed
 - Tracker unit suite: 1 test, all passed
 - Tracker minified build: passed (188,742 bytes; 60,719 bytes gzip)
 - Next.js ESLint and production build: passed
 - Composer and npm security advisories: none reported
 - Docker Compose YAML parse: passed
-- Integrated container smoke test: not run because Docker is not installed on this workstation
+- Integrated Docker routes (`/`, `/heatmaps`, `/funnels`, `/tracker.js`): HTTP 200
 
 ## Next work
 
-1. Run the full Docker smoke test and fix environment-specific integration issues.
-2. Add API authorization, origin rejection, chunk processing, and replay tests.
-3. Add Playwright coverage for register -> create project -> ingest -> replay.
-4. Complete Phase 1 observability and deployment hardening.
-5. Only then begin Phase 2 heatmaps and frustration analytics.
+1. Add Playwright coverage for register -> create project -> ingest -> heatmap/funnel analysis.
+2. Continue Phase 2 with movement maps, rage/dead-click classification, and journeys.
+3. Continue Phase 3 with conversions, forms, and JavaScript error analysis.
+4. Complete observability, retention, and deployment hardening.
