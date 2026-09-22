@@ -7,19 +7,25 @@ type Query {
     project(id: ID!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@project")
     sessions(projectId: ID!, limit: Int = 50): [Session!]! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@sessions")
     session(id: ID!): Session! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@session")
-    overview(projectId: ID!): Overview! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@overview")
+    overview(projectId: ID!, days: Int = 7): Overview! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@overview")
     recordingEvents(sessionId: ID!): JSON! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@recordingEvents")
     heatmapPages(projectId: ID!, days: Int = 30, device: String): [HeatmapPage!]! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@heatmapPages")
     heatmap(projectId: ID!, url: String!, days: Int = 30, device: String): HeatmapReport! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@heatmap")
     funnels(projectId: ID!): [Funnel!]! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@funnels")
     funnelOptions(projectId: ID!, days: Int = 30): [FunnelOption!]! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@funnelOptions")
     funnelAnalysis(projectId: ID!, steps: [FunnelStepInput!]!, days: Int = 30, device: String, windowMinutes: Int = 30): FunnelAnalysis! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@funnelAnalysis")
+    journeyReport(projectId: ID!, days: Int = 30, device: String): JourneyReport! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@journeyReport")
+    formsReport(projectId: ID!, days: Int = 30, device: String): FormsReport! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@formsReport")
+    frustrationReport(projectId: ID!, days: Int = 30, device: String): FrustrationReport! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@frustrationReport")
+    errorsReport(projectId: ID!, days: Int = 30, device: String): ErrorsReport! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@errorsReport")
+    conversionsReport(projectId: ID!, days: Int = 30, device: String): ConversionsReport! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@conversionsReport")
 }
 
 type Mutation {
     register(input: RegisterInput!): AuthPayload! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@register")
     login(input: LoginInput!): AuthPayload! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@login")
     logout: Boolean! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@logout")
+    updateProfile(input: UpdateProfileInput!): User! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\AccountMutation@updateProfile")
     createProject(input: CreateProjectInput!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\ProjectMutation@create")
     updateProject(id: ID!, input: UpdateProjectInput!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\ProjectMutation@update")
     ingestRecording(input: RecordingBatchInput!): IngestionResult! @field(resolver: "App\\GraphQL\\Mutations\\RecordingMutation@ingest")
@@ -27,7 +33,7 @@ type Mutation {
     deleteFunnel(id: ID!): Boolean! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\FunnelMutation@delete")
 }
 
-type User { id: ID!, name: String!, email: String!, created_at: DateTime! }
+type User { id: ID!, name: String!, email: String!, contact: String, avatar_url: String, created_at: DateTime! }
 type Project {
     id: ID!, name: String!, public_key: String!, recording_enabled: Boolean!, sampling_rate: Int!,
     privacy_settings: JSON, last_event_at: DateTime, domains: [ProjectDomain!]!, created_at: DateTime!
@@ -39,7 +45,11 @@ type Session {
     country: String, converted: Boolean!, rage_clicks: Int!, dead_clicks: Int!, visitor: Visitor!
 }
 type Visitor { id: ID!, visitor_uuid: String! }
-type Overview { visitors: Int!, sessions: Int!, averageDuration: Int!, pagesPerSession: Float!, conversionRate: Float!, conversions: Int! }
+type Overview {
+    visitors: Int!, sessions: Int!, averageDuration: Int!, pagesPerSession: Float!, conversionRate: Float!, conversions: Int!,
+    visitorsChange: Float!, sessionsChange: Float!, durationChange: Float!, conversionChange: Float!, traffic: [TrafficPoint!]!
+}
+type TrafficPoint { date: String!, sessions: Int!, visitors: Int!, conversions: Int! }
 type HeatmapPage { url: String!, views: Int!, clicks: Int! }
 type HeatmapPoint { x: Float!, y: Float!, clicks: Int!, selector: String }
 type ScrollDepth { depth: Int!, visitors: Int!, percentage: Float! }
@@ -58,11 +68,26 @@ type FunnelAnalysis {
     totalSessions: Int!, startedSessions: Int!, completedSessions: Int!, conversionRate: Float!,
     medianTimeToConvert: Int!, steps: [FunnelAnalysisStep!]!
 }
+type JourneyReport { totalSessions: Int!, uniqueVisitors: Int!, averageSteps: Float!, bounceRate: Float!, paths: [JourneyPath!]!, entryPages: [JourneyPage!]!, exitPages: [JourneyPage!]! }
+type JourneyPath { signature: String!, steps: [String!]!, sessions: Int!, share: Float!, conversions: Int!, conversionRate: Float!, exampleSessionId: ID! }
+type JourneyPage { page: String!, sessions: Int!, share: Float! }
+type FormsReport { totalForms: Int!, starts: Int!, submissions: Int!, abandonments: Int!, completionRate: Float!, forms: [FormMetric!]! }
+type FormMetric { key: String!, name: String!, url: String!, starts: Int!, submissions: Int!, abandonments: Int!, completionRate: Float!, topField: String }
+type FrustrationReport { totalSessions: Int!, affectedSessions: Int!, affectedRate: Float!, totalSignals: Int!, rageClicks: Int!, deadClicks: Int!, quickBacks: Int!, items: [FrustrationItem!]! }
+type FrustrationItem { type: String!, url: String!, selector: String!, count: Int!, sessions: Int!, latestAt: String!, exampleSessionId: ID! }
+type ErrorsReport { totalErrors: Int!, uniqueErrors: Int!, affectedSessions: Int!, errorRate: Float!, issues: [ErrorIssue!]!, topPages: [ErrorPage!]! }
+type ErrorIssue { fingerprint: String!, message: String!, source: String!, line: Int!, url: String!, count: Int!, sessions: Int!, firstSeen: String!, lastSeen: String!, exampleSessionId: ID! }
+type ErrorPage { page: String!, count: Int! }
+type ConversionsReport { totalSessions: Int!, totalConversions: Int!, convertedSessions: Int!, conversionRate: Float!, revenue: Float!, averageValue: Float!, currency: String!, goals: [ConversionGoal!]!, trend: [ConversionTrend!]!, recent: [RecentConversion!]! }
+type ConversionGoal { name: String!, conversions: Int!, revenue: Float!, currency: String! }
+type ConversionTrend { date: String!, conversions: Int! }
+type RecentConversion { sessionId: ID!, visitorId: String!, goal: String!, value: Float!, currency: String!, url: String!, occurredAt: String! }
 type AuthPayload { token: String!, user: User! }
 type IngestionResult { accepted: Boolean!, batchId: String, eventCount: Int! }
 
 input RegisterInput { name: String!, email: String!, password: String!, password_confirmation: String! }
 input LoginInput { email: String!, password: String! }
+input UpdateProfileInput { name: String, email: String, contact: String, avatarUrl: String, currentPassword: String, password: String, password_confirmation: String }
 input CreateProjectInput { name: String!, domains: [String!]! }
 input UpdateProjectInput { name: String, domains: [String!], recordingEnabled: Boolean, samplingRate: Int, privacySettings: JSON }
 input FunnelStepInput { type: String!, value: String!, operator: String = "exact", label: String! }

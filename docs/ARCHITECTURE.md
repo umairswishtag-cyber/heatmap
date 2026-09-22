@@ -25,6 +25,8 @@ Dashboard -> authenticated GraphQL queries -----------------> PostgreSQL
 Dashboard -> session recordingEvents query -----------------> authorized MinIO read
 ```
 
+Behavior reports are implemented as project-scoped domain services behind typed GraphQL fields. Journey, form, frustration, error, conversion, funnel, and heatmap services query indexed event metadata and return presentation-ready aggregates; raw rrweb data remains isolated in object storage and is loaded only for replay.
+
 The ingestion mutation accepts compressed base64 gzip data. Keeping ingestion in GraphQL satisfies the single-contract requirement, but it is intentionally isolated from management resolvers so it can later be routed/scaled separately without changing the SDK contract.
 
 ## Tenancy and authorization
@@ -33,7 +35,7 @@ Ownership is `users -> projects -> all analytics records`. Resolvers never accep
 
 ## Recording lifecycle
 
-1. The tracker creates persistent `visitor_id` and inactivity-based `session_id` values.
+1. The tracker creates a persistent `visitor_id` and a tab-lifetime, inactivity-based `session_id`. Page loads in the same tab remain one recording, while a later visit in a new tab gets a new recording.
 2. rrweb and semantic analytics records enter an in-memory buffer after client privacy filtering.
 3. Every five seconds or at lifecycle boundaries, the tracker gzip-compresses a batch and invokes `ingestRecording`.
 4. The API validates key, origin, encoding, size, and shape, then queues an immutable batch.

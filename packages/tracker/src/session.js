@@ -1,4 +1,4 @@
-import { read, write } from './storage.js';
+import { read, readSession, write, writeSession } from './storage.js';
 
 export const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -9,16 +9,16 @@ export function identifier(prefix) {
 
 export function getIdentity(now = Date.now()) {
   const visitorId = read('visitor_id') || identifier('visitor');
-  const previous = read('session');
+  const previous = readSession('session');
   const session = !previous || now - previous.lastActivity > SESSION_TIMEOUT_MS
     ? { id: identifier('session'), startedAt: now, lastActivity: now }
     : { ...previous, lastActivity: now };
   write('visitor_id', visitorId);
-  write('session', session);
+  writeSession('session', session);
   return { visitorId, sessionId: session.id };
 }
 
 export function touchSession(now = Date.now()) {
-  const session = read('session');
-  if (session) write('session', { ...session, lastActivity: now });
+  const session = readSession('session');
+  if (session) writeSession('session', { ...session, lastActivity: now });
 }

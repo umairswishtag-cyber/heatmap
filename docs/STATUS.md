@@ -1,6 +1,6 @@
 # Delivery status
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
 
 Status values: **Done**, **In progress**, **Planned**.
 
@@ -24,6 +24,11 @@ Status values: **Done**, **In progress**, **Planned**.
 | Session replay | Done | Authorized chunk aggregation and rrweb-player route |
 | Heatmaps | Done | Project-scoped click and scroll maps with page, date, and device filters plus CSV export |
 | Funnels | Done | Saved ordered funnels, page/custom-event steps, conversion/drop-off analysis, and median timing |
+| Journeys | Done | Common paths, entry/exit rankings, bounce rate, device/date filters, and replay links |
+| Forms | Done | Privacy-safe starts, submissions, abandonment, completion rate, and field engagement |
+| Frustration | Done | Rage clicks, dead clicks, quick backs, ranked issue clusters, and replay links |
+| JavaScript errors | Done | Fingerprinted issues, affected sessions/pages, occurrence counts, and replay links |
+| Conversions | Done | Goal totals, rate, value, daily trends, goal ranking, and recent conversion replays |
 | Automated API tests | In progress | Core unit/feature coverage is started; expand edge cases |
 | End-to-end Docker verification | Done | Images rebuilt, migration applied, routes and tracker smoke-tested through Nginx |
 
@@ -52,6 +57,6 @@ Verified on 2026-09-21 in the current workstation:
 ## Next work
 
 1. Add Playwright coverage for register -> create project -> ingest -> heatmap/funnel analysis.
-2. Continue Phase 2 with movement maps, rage/dead-click classification, and journeys.
-3. Continue Phase 3 with conversions, forms, and JavaScript error analysis.
+2. Continue Phase 2 with movement maps and deeper frustration correlation.
+3. Continue Phase 3 with configurable conversion goals and revenue attribution.
 4. Complete observability, retention, and deployment hardening.

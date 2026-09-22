@@ -65,11 +65,17 @@ class RecordingProcessorService
             $this->storeSemanticEvents($project->id, $session, $batch['events'], $batch['url']);
             $pageCount = $session->hasAttribute('page_count') ? $session->page_count : 0;
             $newPages = collect($batch['events'])->where('kind', 'page_view')->count();
+            $newRageClicks = collect($batch['events'])->where('kind', 'rage_click')->count();
+            $newDeadClicks = collect($batch['events'])->where('kind', 'dead_click')->count();
+            $converted = collect($batch['events'])->contains(fn ($event) => ($event['kind'] ?? null) === 'conversion');
             $session->forceFill([
                 'ended_at' => $endedAt,
                 'duration' => max(0, (int) round($session->started_at->diffInSeconds($endedAt))),
                 'exit_page' => $batch['url'],
                 'page_count' => $pageCount + $newPages,
+                'rage_clicks' => $session->rage_clicks + $newRageClicks,
+                'dead_clicks' => $session->dead_clicks + $newDeadClicks,
+                'converted' => $session->converted || $converted,
             ])->save();
             $project->forceFill(['last_event_at' => now()])->save();
         });
@@ -84,8 +90,12 @@ class RecordingProcessorService
             }
             $occurredAt = isset($event['timestamp']) ? CarbonImmutable::createFromTimestampMs((int) $event['timestamp']) : now();
             $data = is_array($event['data'] ?? null) ? $event['data'] : [];
+            $eventName = $kind === 'custom_event' && is_string($data['name'] ?? null)
+                ? substr(trim($data['name']), 0, 100)
+                : $kind;
+            $eventName = $eventName !== '' ? $eventName : 'custom_event';
             DB::table('analytics_events')->insert([
-                'project_id' => $projectId, 'session_id' => $session->id, 'event_name' => $kind,
+                'project_id' => $projectId, 'session_id' => $session->id, 'event_name' => $eventName,
                 'url' => $data['url'] ?? $fallbackUrl, 'properties' => json_encode($data),
                 'occurred_at' => $occurredAt, 'created_at' => now(), 'updated_at' => now(),
             ]);

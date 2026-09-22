@@ -6,6 +6,7 @@ use App\Jobs\ProcessRecordingChunk;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class GraphQLPlatformTest extends TestCase
@@ -46,6 +47,30 @@ class GraphQLPlatformTest extends TestCase
 
         $this->assertNotEmpty($response->json('errors'));
         $this->assertNull($response->json('data.project'));
+    }
+
+    public function test_account_can_update_profile_and_password(): void
+    {
+        $user = User::factory()->create(['password' => 'old-secure-password']);
+        $token = $user->createToken('test')->plainTextToken;
+        $query = 'mutation Update($input:UpdateProfileInput!){updateProfile(input:$input){name email contact avatar_url}}';
+
+        $this->withToken($token)->postJson('/graphql', [
+            'query' => $query,
+            'variables' => ['input' => [
+                'name' => 'Updated Owner',
+                'email' => 'updated@example.com',
+                'contact' => '+92 300 1234567',
+                'avatarUrl' => 'https://example.com/avatar.jpg',
+                'currentPassword' => 'old-secure-password',
+                'password' => 'new-secure-password',
+                'password_confirmation' => 'new-secure-password',
+            ]],
+        ])->assertOk()
+            ->assertJsonPath('data.updateProfile.name', 'Updated Owner')
+            ->assertJsonPath('data.updateProfile.contact', '+92 300 1234567');
+
+        $this->assertTrue(Hash::check('new-secure-password', $user->fresh()->password));
     }
 
     public function test_ingestion_accepts_only_an_allowed_origin_and_queues_work(): void

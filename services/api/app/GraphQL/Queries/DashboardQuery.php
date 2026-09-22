@@ -2,9 +2,14 @@
 
 namespace App\GraphQL\Queries;
 
-use App\Models\RecordingSession;
+use App\Services\ConversionAnalyticsService;
+use App\Services\ErrorAnalyticsService;
+use App\Services\FormAnalyticsService;
+use App\Services\FrustrationService;
 use App\Services\FunnelService;
 use App\Services\HeatmapService;
+use App\Services\JourneyService;
+use App\Services\OverviewService;
 use App\Services\ProjectAccessService;
 use App\Services\ReplayService;
 
@@ -15,6 +20,12 @@ class DashboardQuery
         private ReplayService $replay,
         private HeatmapService $heatmaps,
         private FunnelService $funnels,
+        private JourneyService $journeys,
+        private FormAnalyticsService $forms,
+        private FrustrationService $frustration,
+        private ErrorAnalyticsService $errors,
+        private ConversionAnalyticsService $conversions,
+        private OverviewService $overview,
     ) {}
 
     public function projects(): iterable
@@ -42,18 +53,8 @@ class DashboardQuery
     public function overview($_, array $args): array
     {
         $project = $this->access->project(request()->user(), $args['projectId']);
-        $base = RecordingSession::where('project_id', $project->id);
-        $sessions = (clone $base)->count();
-        $visitors = (clone $base)->distinct('visitor_id')->count('visitor_id');
-        $conversions = (clone $base)->where('converted', true)->count();
 
-        return [
-            'visitors' => $visitors, 'sessions' => $sessions,
-            'averageDuration' => (int) round((clone $base)->avg('duration') ?? 0),
-            'pagesPerSession' => $sessions ? round((float) (clone $base)->avg('page_count'), 2) : 0,
-            'conversionRate' => $sessions ? round($conversions * 100 / $sessions, 2) : 0,
-            'conversions' => $conversions,
-        ];
+        return $this->overview->report($project, $args['days'] ?? 7);
     }
 
     public function recordingEvents($_, array $args): array
@@ -97,6 +98,51 @@ class DashboardQuery
             $args['days'] ?? 30,
             $args['device'] ?? null,
             $args['windowMinutes'] ?? 30,
+        );
+    }
+
+    public function journeyReport($_, array $args): array
+    {
+        return $this->journeys->report(
+            $this->access->project(request()->user(), $args['projectId']),
+            $args['days'] ?? 30,
+            $args['device'] ?? null,
+        );
+    }
+
+    public function formsReport($_, array $args): array
+    {
+        return $this->forms->report(
+            $this->access->project(request()->user(), $args['projectId']),
+            $args['days'] ?? 30,
+            $args['device'] ?? null,
+        );
+    }
+
+    public function frustrationReport($_, array $args): array
+    {
+        return $this->frustration->report(
+            $this->access->project(request()->user(), $args['projectId']),
+            $args['days'] ?? 30,
+            $args['device'] ?? null,
+        );
+    }
+
+    public function errorsReport($_, array $args): array
+    {
+        return $this->errors->report(
+            $this->access->project(request()->user(), $args['projectId']),
+            $args['days'] ?? 30,
+            $args['device'] ?? null,
+        );
+    }
+
+    public function conversionsReport($_, array $args): array
+    {
+        return $this->conversions->report(
+            $this->access->project(request()->user(), $args['projectId']),
+            $args['days'] ?? 30,
+            $args['device'] ?? null,
         );
     }
 }

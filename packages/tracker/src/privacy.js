@@ -21,8 +21,12 @@ export function recorderPrivacyOptions(settings = {}) {
 
 export function safeFormMetadata(element) {
   if (!element || isIgnored(element)) return null;
+  const form = element.tagName?.toLowerCase() === 'form' ? element : element.form;
+  const formId = String(form?.id || form?.getAttribute?.('name') || 'form').slice(0, 120);
   return {
     type: sensitiveTypes.has(element.type) ? 'sensitive' : (element.type || element.tagName?.toLowerCase()),
     name: /password|token|secret|card|cvv/i.test(element.name || '') ? 'masked' : (element.name || ''),
+    formId,
+    url: location.href,
   };
 }
