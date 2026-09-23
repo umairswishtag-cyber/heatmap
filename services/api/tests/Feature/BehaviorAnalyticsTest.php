@@ -21,9 +21,11 @@ class BehaviorAnalyticsTest extends TestCase
     public function test_heatmap_report_aggregates_document_clicks_and_scroll_reach(): void
     {
         [$project, $session] = $this->createSessionFixture();
+        $second = $this->newSession($project, 'session-without-scroll');
         $now = now();
         DB::table('analytics_events')->insert([
             ['project_id' => $project->id, 'session_id' => $session->id, 'event_name' => 'page_view', 'url' => 'https://shop.test/product', 'properties' => '{}', 'occurred_at' => $now, 'created_at' => $now, 'updated_at' => $now],
+            ['project_id' => $project->id, 'session_id' => $second->id, 'event_name' => 'page_view', 'url' => 'https://shop.test/product', 'properties' => '{}', 'occurred_at' => $now, 'created_at' => $now, 'updated_at' => $now],
         ]);
         DB::table('click_events')->insert([
             ['project_id' => $project->id, 'session_id' => $session->id, 'url' => 'https://shop.test/product', 'x' => 10, 'y' => 20, 'page_x' => 720, 'page_y' => 1500, 'viewport_width' => 1440, 'viewport_height' => 900, 'document_height' => 3000, 'selector' => '#buy', 'occurred_at' => $now, 'created_at' => $now, 'updated_at' => $now],
@@ -34,12 +36,14 @@ class BehaviorAnalyticsTest extends TestCase
 
         $report = app(HeatmapService::class)->report($project, 'https://shop.test/product');
 
-        $this->assertSame(1, $report['pageViews']);
+        $this->assertSame(2, $report['pageViews']);
+        $this->assertSame(2, $report['sessions']);
         $this->assertSame(1, $report['totalClicks']);
         $this->assertSame(50.0, $report['points'][0]['x']);
         $this->assertSame(50.0, $report['points'][0]['y']);
-        $this->assertSame(100.0, $report['scrollDepths'][2]['percentage']);
+        $this->assertSame(50.0, $report['scrollDepths'][2]['percentage']);
         $this->assertSame(0.0, $report['scrollDepths'][3]['percentage']);
+        $this->assertSame(38.0, $report['averageScrollDepth']);
     }
 
     public function test_funnel_analysis_requires_order_and_reports_dropoff(): void

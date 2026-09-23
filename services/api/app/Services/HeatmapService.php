@@ -44,27 +44,36 @@ class HeatmapService
             $documentHeight = max(1, (int) ($click->document_height ?: $click->viewport_height));
             $x = min(100, max(0, (($click->page_x ?? $click->x) / max(1, $click->viewport_width)) * 100));
             $y = min(100, max(0, (($click->page_y ?? $click->y) / $documentHeight) * 100));
-            $key = round($x / 3) .':'. round($y / 3);
+            $key = round($x / 3).':'.round($y / 3);
             if (! isset($pointGroups[$key])) {
                 $pointGroups[$key] = ['x' => round($x, 2), 'y' => round($y, 2), 'clicks' => 0, 'selector' => $click->selector ?: null];
             }
             $pointGroups[$key]['clicks']++;
         }
 
-        $sessionMaxDepths = $this->scrollsQuery($project, $days, $device)
+        $pageSessionIds = $this->eventsQuery($project, $days, $device)
+            ->where('analytics_events.url', $url)
+            ->distinct()
+            ->pluck('analytics_events.session_id');
+        $sessionMaxDepthRows = $this->scrollsQuery($project, $days, $device)
             ->where('scroll_events.url', $url)
             ->select('scroll_events.session_id', DB::raw('MAX(scroll_events.depth) as depth'))
-            ->groupBy('scroll_events.session_id')->pluck('depth');
-        $scrollSessions = $sessionMaxDepths->count();
-        $scrollDepths = collect([25, 50, 75, 100])->map(function ($depth) use ($sessionMaxDepths, $scrollSessions) {
+            ->groupBy('scroll_events.session_id')
+            ->get();
+        $sessionMaxDepths = $pageSessionIds->mapWithKeys(fn ($sessionId) => [(string) $sessionId => 0]);
+        foreach ($sessionMaxDepthRows as $row) {
+            $sessionMaxDepths->put((string) $row->session_id, (int) $row->depth);
+        }
+        $pageSessions = $sessionMaxDepths->count();
+        $scrollDepths = collect([25, 50, 75, 100])->map(function ($depth) use ($sessionMaxDepths, $pageSessions) {
             $visitors = $sessionMaxDepths->filter(fn ($value) => $value >= $depth)->count();
-            return ['depth' => $depth, 'visitors' => $visitors, 'percentage' => $scrollSessions ? round($visitors * 100 / $scrollSessions, 1) : 0];
+
+            return ['depth' => $depth, 'visitors' => $visitors, 'percentage' => $pageSessions ? round($visitors * 100 / $pageSessions, 1) : 0];
         })->all();
 
         $pageViews = $this->eventsQuery($project, $days, $device)
             ->where('analytics_events.event_name', 'page_view')->where('analytics_events.url', $url)->count();
-        $sessions = $this->eventsQuery($project, $days, $device)
-            ->where('analytics_events.url', $url)->distinct('analytics_events.session_id')->count('analytics_events.session_id');
+        $sessions = $pageSessionIds->count();
         $topElements = $clickRows->groupBy(fn ($click) => $click->selector ?: 'Unidentified element')
             ->map(fn ($rows, $selector) => [
                 'selector' => $selector,
@@ -77,7 +86,7 @@ class HeatmapService
             'pageViews' => $pageViews,
             'sessions' => $sessions,
             'totalClicks' => $clickRows->count(),
-            'averageScrollDepth' => $scrollSessions ? round((float) $sessionMaxDepths->average(), 1) : 0,
+            'averageScrollDepth' => $pageSessions ? round((float) $sessionMaxDepths->average(), 1) : 0,
             'points' => collect($pointGroups)->sortByDesc('clicks')->take(500)->values()->all(),
             'scrollDepths' => $scrollDepths,
             'topElements' => $topElements,
