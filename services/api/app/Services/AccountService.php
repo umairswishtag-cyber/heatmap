@@ -12,6 +12,10 @@ class AccountService
 {
     public function update(User $user, array $attributes): User
     {
+        if (isset($attributes['email'])) {
+            $attributes['email'] = mb_strtolower(trim($attributes['email']));
+        }
+
         $input = Validator::make($attributes, [
             'name' => ['sometimes', 'required', 'string', 'max:120'],
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],

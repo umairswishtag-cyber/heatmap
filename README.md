@@ -28,8 +28,13 @@ docker-compose.yml   PostgreSQL, Redis, MinIO and application services
 3. Run `docker compose exec api php artisan migrate`.
 4. Open `http://localhost:3000` for the dashboard and `http://localhost/graphql` for GraphQL.
 
-If ports 80, 3000, or 9001 are already in use, change `HTTP_PORT`,
-`DASHBOARD_PORT`, or `MINIO_CONSOLE_PORT` in `.env`. Keep `APP_URL`,
+Development email is captured by Mailpit at `http://localhost:8025`. Use the
+**Forgot password?** link on the sign-in form, then open the reset email in
+Mailpit. Account passwords are one-way hashes and cannot be viewed in XAMPP,
+Docker, or PostgreSQL; use the reset flow to replace a forgotten password.
+
+If ports 80, 3000, 8025, or 9001 are already in use, change `HTTP_PORT`,
+`DASHBOARD_PORT`, `MAILPIT_PORT`, or `MINIO_CONSOLE_PORT` in `.env`. Keep `APP_URL`,
 `NEXT_PUBLIC_GRAPHQL_URL`, and `NEXT_PUBLIC_TRACKER_URL` aligned with
 `HTTP_PORT`, then rebuild with `docker compose up --build -d`.
 

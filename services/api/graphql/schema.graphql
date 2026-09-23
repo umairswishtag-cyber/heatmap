@@ -24,10 +24,13 @@ type Query {
 type Mutation {
     register(input: RegisterInput!): AuthPayload! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@register")
     login(input: LoginInput!): AuthPayload! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@login")
+    requestPasswordReset(email: String!): Boolean! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@requestPasswordReset")
+    resetPassword(input: ResetPasswordInput!): Boolean! @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@resetPassword")
     logout: Boolean! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@logout")
     updateProfile(input: UpdateProfileInput!): User! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\AccountMutation@updateProfile")
     createProject(input: CreateProjectInput!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\ProjectMutation@create")
     updateProject(id: ID!, input: UpdateProjectInput!): Project! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\ProjectMutation@update")
+    deleteProject(id: ID!): Boolean! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\ProjectMutation@delete")
     ingestRecording(input: RecordingBatchInput!): IngestionResult! @field(resolver: "App\\GraphQL\\Mutations\\RecordingMutation@ingest")
     saveFunnel(input: SaveFunnelInput!): Funnel! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\FunnelMutation@save")
     deleteFunnel(id: ID!): Boolean! @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\FunnelMutation@delete")
@@ -87,6 +90,7 @@ type IngestionResult { accepted: Boolean!, batchId: String, eventCount: Int! }
 
 input RegisterInput { name: String!, email: String!, password: String!, password_confirmation: String! }
 input LoginInput { email: String!, password: String! }
+input ResetPasswordInput { token: String!, email: String!, password: String!, password_confirmation: String! }
 input UpdateProfileInput { name: String, email: String, contact: String, avatarUrl: String, currentPassword: String, password: String, password_confirmation: String }
 input CreateProjectInput { name: String!, domains: [String!]! }
 input UpdateProjectInput { name: String, domains: [String!], recordingEnabled: Boolean, samplingRate: Int, privacySettings: JSON }

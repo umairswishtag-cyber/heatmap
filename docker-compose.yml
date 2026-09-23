@@ -44,6 +44,11 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-now}
       MINIO_BUCKET: ${MINIO_BUCKET:-recordings}
 
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports: ["${MAILPIT_PORT:-8025}:8025"]
+
   api:
     build: ./services/api
     restart: unless-stopped
@@ -52,6 +57,7 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_started }
       minio: { condition: service_started }
+      mailpit: { condition: service_started }
     environment:
       APP_URL: ${APP_URL:-http://localhost}
       DB_DATABASE: ${POSTGRES_DB:-cro}
@@ -61,6 +67,14 @@ services:
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minio}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-change-me-now}
       AWS_BUCKET: ${MINIO_BUCKET:-recordings}
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_SCHEME: ${MAIL_SCHEME:-null}
+      MAIL_USERNAME: ${MAIL_USERNAME:-null}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-null}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@pulsecro.test}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-PulseCRO}
 
   worker:
     build: ./services/api

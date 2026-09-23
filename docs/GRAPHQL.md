@@ -23,6 +23,29 @@ Variables:
 }
 ```
 
+## Reset a forgotten password
+
+Requesting a reset always returns `true`, whether or not the email exists, so
+account membership is not disclosed:
+
+```graphql
+mutation ForgotPassword($email: String!) {
+  requestPasswordReset(email: $email)
+}
+```
+
+The email links to the dashboard with a one-time token. The dashboard submits:
+
+```graphql
+mutation ResetPassword($input: ResetPasswordInput!) {
+  resetPassword(input: $input)
+}
+```
+
+The input contains `email`, `token`, `password`, and `password_confirmation`.
+Tokens expire after 60 minutes. A successful reset revokes all existing API
+tokens for that account.
+
 ## Create and list projects
 
 ```graphql

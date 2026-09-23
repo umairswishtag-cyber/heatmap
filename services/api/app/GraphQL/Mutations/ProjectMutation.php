@@ -34,4 +34,9 @@ class ProjectMutation
 
         return $this->projects->update($this->access->project(request()->user(), $args['id']), $input);
     }
+
+    public function delete($_, array $args): bool
+    {
+        return $this->projects->delete($this->access->project(request()->user(), $args['id']));
+    }
 }
